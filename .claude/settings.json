@@ -1,18 +1,4 @@
 {
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format-code.sh",
-            "timeout": 30
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "allow": [
       "WebSearch",
@@ -51,9 +37,37 @@
       "Bash(env)",
       "Bash(test:*)",
       "mcp__playwright__*",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "mcp__claude_ai_Atlassian__getAccessibleAtlassianResources",
+      "mcp__claude_ai_Atlassian__getJiraIssue",
+      "Read(//Users/rogerjunior/Documents/code/hay/hay-core/**)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(/Users/rogerjunior/Documents/code/hay/hay-core/node_modules/.bin/tsc --noEmit --project /Users/rogerjunior/Documents/code/hay/hay-core/server/tsconfig.json)",
+      "Bash(/Users/rogerjunior/.nvm/versions/node/v22.14.0/bin/npx tsc --noEmit --pretty server/services/oauth.service.ts)",
+      "Bash(export PATH=\"$HOME/.nvm/versions/node/v20.19.6/bin:$PATH\")",
+      "Bash(node_modules/.bin/tsc --noEmit --project server/tsconfig.json)",
+      "Bash(export PATH=\"$HOME/.nvm/versions/node/v20.19.6/bin:/usr/bin:$PATH\")",
+      "Bash(export PATH=\"$HOME/.nvm/versions/node/v20.19.6/bin:/usr/bin:/bin:$PATH\")",
+      "Bash(/Users/rogerjunior/.nvm/versions/node/v22.12.0/bin/npx tsc --noEmit)",
+      "Bash(echo \"SHELL: $SHELL\")",
+      "Bash(echo \"PATH: $PATH\")",
+      "Read(//Users/rogerjunior/**)"
     ],
     "deny": [],
     "ask": []
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format-code.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
   }
 }
