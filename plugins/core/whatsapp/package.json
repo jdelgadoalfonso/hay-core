@@ -1,35 +1,35 @@
 {
-  "name": "hay-plugin-zendesk",
-  "version": "2.0.0",
-  "description": "Connect your Zendesk account to manage tickets, customers, and support workflows",
+  "name": "hay-channel-whatsapp-twilio",
+  "version": "1.0.0",
+  "description": "Connect WhatsApp as a communication channel via Twilio",
   "author": "Hay",
   "type": "module",
   "main": "dist/index.js",
   "hay-plugin": {
     "entry": "./dist/index.js",
-    "displayName": "Zendesk",
-    "category": "integration",
+    "displayName": "WhatsApp",
+    "category": "channel",
+    "channel": "whatsapp",
     "capabilities": [
-      "mcp"
+      "messages",
+      "customers"
     ],
     "env": [
-      "ZENDESK_SUBDOMAIN",
-      "ZENDESK_EMAIL",
-      "ZENDESK_API_TOKEN"
+      "TWILIO_ACCOUNT_SID",
+      "TWILIO_AUTH_TOKEN",
+      "TWILIO_WHATSAPP_NUMBER"
     ]
   },
   "scripts": {
-    "build": "npm run build:ui && npm run build:mcp",
-    "build:mcp": "tsc",
+    "build": "npm run build:ui && tsc",
     "build:ui": "vite build --config vite.config.ui.ts",
     "start": "node dist/index.js",
-    "dev": "npm run build:ui && npm run build:mcp",
+    "dev": "npm run build:ui && tsc",
     "dev:ui": "vite build --watch --config vite.config.ui.ts"
   },
   "dependencies": {
     "@hay/plugin-sdk": "file:../../../packages/plugin-sdk",
-    "@modelcontextprotocol/sdk": "^1.25.2",
-    "dotenv": "^16.3.1"
+    "twilio": "^5.5.1"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

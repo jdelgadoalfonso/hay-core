@@ -1,3 +1,5 @@
+> **⚠️ PAUSED — February 2026**: This plan describes a direct Meta Graph API integration approach. We've decided to go with **Twilio** as the WhatsApp provider instead for faster time-to-market. This direct Meta approach will be revisited in the future. See the Twilio-based implementation in `plugins/core/whatsapp/`.
+
 # WhatsApp Integration Roadmap
 
 This document outlines the steps needed to implement WhatsApp as the first channel plugin in Hay.
