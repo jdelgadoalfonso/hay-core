@@ -54,7 +54,8 @@
       "Read(//Users/rogerjunior/**)",
       "Bash(head -50 /Users/rogerjunior/Documents/code/hay/hay-core/dashboard/pages/conversations/[id].vue)",
       "Bash(head -100 /Users/rogerjunior/Documents/code/hay/hay-core/dashboard/pages/conversations/[id].vue)",
-      "Bash(API_DOMAIN=http://localhost:3001 npx nuxt typecheck)"
+      "Bash(API_DOMAIN=http://localhost:3001 npx nuxt typecheck)",
+      "Bash(API_DOMAIN=http://localhost:3001 npm run typecheck)"
     ],
     "deny": [],
     "ask": []
