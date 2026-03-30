@@ -51,7 +51,10 @@
       "Bash(/Users/rogerjunior/.nvm/versions/node/v22.12.0/bin/npx tsc --noEmit)",
       "Bash(echo \"SHELL: $SHELL\")",
       "Bash(echo \"PATH: $PATH\")",
-      "Read(//Users/rogerjunior/**)"
+      "Read(//Users/rogerjunior/**)",
+      "Bash(head -50 /Users/rogerjunior/Documents/code/hay/hay-core/dashboard/pages/conversations/[id].vue)",
+      "Bash(head -100 /Users/rogerjunior/Documents/code/hay/hay-core/dashboard/pages/conversations/[id].vue)",
+      "Bash(API_DOMAIN=http://localhost:3001 npx nuxt typecheck)"
     ],
     "deny": [],
     "ask": []
