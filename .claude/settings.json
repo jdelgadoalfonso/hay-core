@@ -61,7 +61,8 @@
     "deny": [],
     "ask": [],
     "additionalDirectories": [
-      "/tmp"
+      "/tmp",
+      "/Users/rogerjunior/Documents/code/hay"
     ]
   },
   "hooks": {
