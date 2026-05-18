@@ -57,7 +57,9 @@
       "Bash(API_DOMAIN=http://localhost:3001 npx nuxt typecheck)",
       "Bash(API_DOMAIN=http://localhost:3001 npm run typecheck)",
       "Bash(find /Users/rogerjunior/Documents/code/hay/hay-core/webchat/src -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
-      "Bash(/bin/cat /Users/rogerjunior/Documents/code/hay/hay-core/plugins/core/chatwoot/dist/webhook.js)"
+      "Bash(/bin/cat /Users/rogerjunior/Documents/code/hay/hay-core/plugins/core/chatwoot/dist/webhook.js)",
+      "WebFetch(domain:developers.klaviyo.com)",
+      "Bash(echo \"EXIT=$?\")"
     ],
     "deny": [],
     "ask": [],
