@@ -151,16 +151,30 @@ tRPC routes under `server/routes/v1/products/` (+ REST shim if needed), authenti
 
 Same normalization + embedding path as plugin sync — one contract, many sources.
 
-## 8. Retrieval & Recommendation
+## 8. Retrieval & Recommendation (during orchestration)
 
-- **Intent gating:** extend the perception layer to flag presales/shopping intent. Only then run
-  product retrieval (avoids latency/context pollution on support chats).
-- **`getRelevantProducts(messages, organizationId, filters?)`** in `retrieval.layer.ts`:
-  embed the customer's stated need → vector search over `product_embeddings` (HNSW cosine,
-  tuned threshold) + structured pre-filters (budget→price range, "in stock"→availability,
-  category). Returns **structured** `Product`+top variant objects.
-- **Execution layer** receives structured product objects and reasons over them ("given problem
-  X and budget Y, these fit because…"), emitting a product-recommendation response.
+The orchestrator already has a full **agentic tool-calling loop** (`run.ts:handleExecutionLoop`,
+≤15 iterations; planner step `ASK` / `RESPOND` / `CALL_TOOL` / `HANDOFF` / `CLOSE`; tool results
+fed back into history). Documents are **not** injected into the generation prompt (they're stored
+as IDs and used only for guardrail/confidence scoring) — so there is no RAG-injection path to
+mirror. Products are surfaced as a **tool the model calls**, not as injected context.
+
+- **`recommend_products(query, filters)` — an always-available core/built-in tool.** Registered
+  globally (in the default all-tools-allowed set), not gated by a playbook or intent. The planner
+  decides when to call it; prompt guidance steers it to recommend only when the customer is
+  expressing a need/shopping intent (mitigates surfacing products on support chats; reversible if
+  noisy). This requires extending `tool-execution.service` to support **core tools** alongside the
+  existing plugin/MCP tool dispatch.
+- **Implementation = `getRelevantProducts(query, organizationId, filters?)`** (the tool body):
+  embed the model-formulated need → vector search over `product_embeddings` (HNSW cosine, tuned
+  threshold) + structured filters (budget→price range, "in stock"→availability, category).
+  Returns **structured** `Product` + top-variant objects.
+- **Flow:** the model formulates a clean query + filters from the whole conversation, may `ASK`
+  clarifying questions first (budget/use-case) then `CALL_TOOL`, reasons over the returned
+  products, and `RESPOND`s with the product-card payload. This clarify-then-recommend loop is the
+  natural presales UX and is something per-turn auto-retrieval can't do well.
+- **Optional second tool** `get_live_product_details(ids)` for live price/stock on the shortlist
+  (the deferred v2 freshness idea — drops in as another core tool).
 
 ## 9. Presentation — Product Card Message Type
 
@@ -199,9 +213,11 @@ Products are **org business data, not data-subject PII** — so customer erasure
 - [ ] **P3 — SDK `productSource` + sync engine + Shopify adapter:** extend SDK types, plugin
       manager registration, scheduled re-sync job, build the **Shopify** reference adapter (new
       plugin, GraphQL Admin API). _Verify:_ enable plugin → catalog mirrors; webhook updates price.
-- [ ] **P4 — Retrieval + intent gating:** perception presales-intent flag, `getRelevantProducts`,
-      execution wiring. _Verify:_ presales message returns relevant products; support message does not
-      trigger product retrieval.
+- [ ] **P4 — Recommendation tool:** add core-tool support to `tool-execution.service`, register
+      `recommend_products` (impl = `getRelevantProducts` hybrid search), planner prompt guidance to
+      recommend only on shopping intent. _Verify:_ a presales conversation triggers a
+      `recommend_products` CALL_TOOL with relevant results; a support conversation does not surface
+      products.
 - [ ] **P5 — Product card message type:** orchestrator payload + webchat + dashboard renderers.
       _Verify:_ recommendation renders as cards with working links in widget.
 - [ ] **P6 — Products page + nav gating:** sidebar gate, `products.vue`, route guard, per-plugin
