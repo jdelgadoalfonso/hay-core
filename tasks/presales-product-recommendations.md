@@ -51,8 +51,8 @@ createdBy/updatedBy, metadata). Files under `server/entities/`.
 | `source`                | text/enum                          | `shopify` \| `woocommerce` \| `magento` \| `custom` \| `manual`    |
 | `handle`                | text, indexed                      | slug                                                               |
 | `title`                 | text                               |                                                                    |
-| `descriptionHtml`       | text                               |                                                                    |
-| `descriptionShort`      | text null                          |                                                                    |
+| `description`           | text (markdown)                    | source HTML → sanitized markdown at ingestion (see §5)             |
+| `descriptionShort`      | text null (markdown)               | source HTML → sanitized markdown; null when source has none        |
 | `vendor`                | text null                          |                                                                    |
 | `productType`           | text null                          |                                                                    |
 | `status`                | enum                               | `active` \| `draft` \| `archived`                                  |
@@ -127,6 +127,12 @@ Extend `server/types/plugin-sdk.types.ts` / `plugin.types.ts`:
 - Core's sync engine calls these typed functions; the adapter owns the platform→canonical
   mapping. Plugin manager (`plugin-manager.service.ts`) registers any enabled plugin declaring
   `products` as a sync adapter.
+- **Description cleaning (no raw HTML persisted):** source platforms return HTML
+  (`descriptionHtml` / `description`). The adapter (and the public ingestion API) convert HTML →
+  **sanitized markdown** before producing `CanonicalProduct` — we store markdown, never raw HTML.
+  This removes the stored-XSS surface (cards render markdown, not `v-html`), keeps embeddings
+  clean, and centralizes input cleaning at the one ingestion boundary. Reuse/extend
+  `server/utils/sanitize-html.ts` for the sanitize step.
 
 ## 6. Sync Engine
 
@@ -135,8 +141,9 @@ A `product-sync.service.ts` + a scheduled job in `scheduled-jobs.registry.ts`:
 - **Initial bulk import** on enable: page through `ingestAllProducts`, normalize, upsert, embed.
 - **Webhooks** (`updateProduct` / `handleWebhook`): near-real-time price/stock/create/delete.
 - **Periodic full re-sync** (scheduler, singleton job) to catch drift.
-- **Embedding lifecycle:** (re)compute `searchText` = title + stripped description + vendor +
-  productType + tags + option names + category names; embed only when `searchText` changes
+- **Embedding lifecycle:** (re)compute `searchText` = title + description (markdown stripped to
+  plain text) + vendor + productType + tags + option names + category names; embed only when
+  `searchText` changes
   (skip re-embed on pure price/stock updates — that's why price/stock are columns, not embedded).
 - **Deletes:** `productVectorStore.deleteByProductIds(orgId, ids)` then delete rows (explicit,
   mirroring document pattern; FK cascade as safety net).
