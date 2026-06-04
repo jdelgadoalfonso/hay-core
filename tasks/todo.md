@@ -18,6 +18,15 @@ Branch: `claude/llm-provider-adapter`.
 - [x] 9. Streaming (chatStream for all 3 adapters) + AbortSignal-cancel timeout ✅
 - [x] 10. Dashboard org-settings LLM UI ✅ (getLlmConfig/updateLlmConfig + settings/llm page)
 
+## Results
+
+All 10 slices landed in **PR #44** (one commit each, each typecheck/lint/test-verified).
+
+- No `new OpenAI(` outside `server/services/llm/openai-compatible.provider.ts`.
+- Default (unconfigured) org behavior byte-for-byte unchanged (slice-1 characterization test).
+- Providers: OpenAI/Mistral/Grok (openai-compatible) + Anthropic + Gemini (dedicated); managed embeddings.
+- Verified: typecheck:server + typecheck:dashboard + eslint clean; jest 39/39 LLM suites, 103/103 services.
+
 ## Acceptance
 
 - No service imports `openai` except the adapter layer.
