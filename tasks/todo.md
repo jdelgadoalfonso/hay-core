@@ -1,97 +1,36 @@
-# Websites as Connected Sources (Option B — built-in importer)
+# PR 1 — LLM Provider Adapter (org-level provider + model tiers)
 
-## Goal / Acceptance Criteria
+Approved plan: `~/.claude/plans/tidy-twirling-hoare.md`. Research artifact: workflow `wj6c0lukt`.
+Deferred metering design: `tasks/managed-llm-metering-design.md` (PR #43).
 
-- A user can connect a website URL and it appears in `/documents/sources` like Confluence:
-  display name, sync status pill, "last synced", document count.
-- Pages sync as `Document`s tied to a `DocumentSource` (sourceType `website`), with
-  `externalUpdatedAt` populated from sitemap `<lastmod>` / `Last-Modified` so the UI
-  shows when each page was last updated, and incremental sync is cheap.
-- Re-sync (manual + scheduled), incremental delta, and weekly full-sweep deletion
-  reconciliation all work via the existing sync engine — no engine special-casing
-  beyond importer resolution.
-- The old one-shot web import (discoverWebPages/importFromWeb/recrawl) is REMOVED;
-  the import.vue website step creates a website source instead.
+Branch: `claude/llm-provider-adapter`.
 
-## Decisions (confirmed with user)
+## Slices (build/verify order, one PR)
 
-- No-sitemap sites: sitemap-first; bounded single crawl fallback (maxPages cap),
-  no per-page lastmod there. Log the limitation.
-- Converge now: remove the one-shot web import endpoints in this PR.
-- Built-in importer uses sentinel `pluginId = "core:website"`, `sourceType = "website"`.
+- [x] **1. Contract + OpenAICompatibleProvider + factory → LLMService (env-default, provably unchanged)** ✅ typecheck/lint/char-test green
+- [ ] 2. Tiers replace hardcoded models at the ~12 call sites
+- [ ] 3. UsageRecord + invokeWithMeta + onUsage; delete bogus cost log
+- [ ] 4. Capability-driven structured-output rungs + validate-and-repair (ajv)
+- [ ] 5. OrgLlmConfig in OrganizationSettings jsonb + BYO decryption + bundle cache
+- [ ] 6. VectorStoreService → EmbeddingProvider + 1536 assertion
+- [ ] 7. AnthropicChatProvider (dedicated, @anthropic-ai/sdk)
+- [ ] 8. GeminiProvider (chat + embedding, @google/genai); Mistral+Grok = config of OpenAICompatible
+- [ ] 9. Streaming (chatStream) + AbortSignal timeout
+- [ ] 10. Dashboard org-settings LLM UI
 
-## Plan
+## Acceptance
 
-- [ ] Backend: `web-scraper.service.ts` — extract sitemap `<lastmod>` + `Last-Modified` header
-- [ ] Backend: new `WebsiteImporter` implementing DocumentImporterContract over web-scraper + HtmlProcessor
-- [ ] Backend: `document-source-sync.service.ts` — `resolveImporter(source)` pluggable hook
-- [ ] Backend: `document-sources/index.ts` — `createWebsite({ url })` mutation (SSRF-validated)
-- [ ] Frontend: import.vue website step → `createWebsite` → redirect to sources/[id]
-- [ ] Frontend: `getSourceIcon` Globe for `website`; i18n labels
-- [ ] Remove: discoverWebPages/importFromWeb/recrawl endpoints + dead web-import code paths
-- [ ] Verify: typecheck, server tests (add WebsiteImporter unit + resolver test), manual repro
+- No service imports `openai` except the adapter layer.
+- Org with no config → behavior byte-for-byte unchanged (gpt-4o default kept).
+- Switching provider/model is config-only; call sites never reference model strings.
+- Every chat/embedding result carries a normalized UsageRecord; onUsage fires on every call.
 
-## Working Notes
+## Working notes
 
-- Sync engine importer resolution: document-source-sync.service.ts:159 + createImporter (516).
-- createImporter takes (router, source) and returns DocumentImporterContract — built-in
-  importer is constructed WITH source, ignores instanceId, reads base URL from source.config.url.
-- Contract: server/types/plugin-sdk.types.ts (DocumentImporterContract + page/root/change types).
-- Sources UI already generic; thumbnail <img> 404s for core:website and falls back to getSourceIcon.
-- discover() must be resumable via offset cursor — re-fetch sitemap each page, slice by offset.
-
-## Results
-
-**What changed**
-
-- Websites are now first-class `DocumentSource`s (sourceType `website`, sentinel pluginId
-  `core:website`) backed by a built-in importer — no plugin required. They show in
-  /documents/sources with sync status, "last synced", doc count, and per-page `externalUpdatedAt`
-  from sitemap `<lastmod>` / `Last-Modified` (the "when was it updated" data the user wanted).
-  Re-sync, incremental delta, and weekly full-sweep deletion reconciliation all work via the
-  existing sync engine, unchanged.
-- New: server/services/importers/website-importer.ts; createWebsite mutation; resolveImporter() seam.
-- Converged: the old one-shot web import is gone; the import.vue "website" step connects a source.
-
-**Verification**
-
-- server typecheck ✅ · server lint (changed files) ✅
-- dashboard typecheck ✅ (API_DOMAIN=… NODE_ENV=development) · dashboard lint (changed files) ✅
-- jest website-importer.test.ts ✅ 5/5 · jest document-source-sync.test.ts ✅ (plugin path intact)
-
-**Live sync progress (added)**
-
-- Sync engine streams throttled progress onto the running job's `data.progress`
-  ({ phase, total, discovered, processed, created, updated, currentTitle, currentUrl }).
-- WebsiteImporter.discover reports `total` (enumerated count) → "X of Y" bar.
-- Source detail page shows a live "Discovering / Importing pages…" card (counts + current page),
-  polls every 2s while a sync job is active (queued/processing/running), and reflects on connect.
-- Verified: server typecheck/lint ✅, dashboard typecheck/lint ✅, importer + sync tests ✅.
-
-**Bugfix: duplicate sync jobs / frozen progress (regression)**
-
-- Symptom: connecting one website produced a new "Sync …" job every 60s, all stuck
-  "processing", 0 documents, and the live card frozen at "Importing pages… Starting…".
-- Root cause: the 60s `document-source-sync-dispatcher` enqueues every source
-  `findDueForSync` returns. A brand-new source has `last_synced_at = NULL` and
-  `last_sync_status = NULL` (the 'running' flag is only set once a worker picks the
-  job up via `markRunning`), so it matched "due" every tick → one new job per minute.
-  The UI polls the newest active job, but each duplicate bailed at `markRunning`
-  ("already running") and never reported progress → frozen "Starting…", while the
-  oldest job silently did the work.
-- Fix: `enqueueSync` is now idempotent — `jobRepository.findActiveSyncJob(sourceId)`
-  returns any pending/queued/processing sync job for the source and `enqueueSync`
-  reuses it instead of creating a duplicate. Single chokepoint, covers both the
-  dispatcher and the manual "Sync now" / connect paths. Collapsing to one job also
-  restores live progress (the polled job is now the one doing the work).
-- Regression test: `enqueueSync is idempotent` in the sync integration suite.
-- Verified: server typecheck ✅ · lint ✅ · jest document-source-sync ✅ 7 passed / 2 skipped.
-- Note: existing piled-up jobs drain on their own (each reaches terminal via
-  completeJob); the fix takes effect after the server restarts to load new code.
-
-**Known follow-ups (optional)**
-
-- Unused i18n keys remain (documents.import.discovery._, .metadata._, processing web keys,
-  webUrl.discoverPages, steps.selectPages/addMetadata/processing) — harmless; prune later.
-- No-sitemap crawl-fallback ordering is best-effort across partial-run resumes (sitemap path is
-  deterministic). Acceptable for v1; weekly full sweep reconciles.
+- gpt-4o stays the `hard` default (still works for the user); all model IDs env/DB-overridable.
+- LLMService is a stateless singleton (12 `new LLMService()` sites, no orgId at construction) →
+  resolve per-org inside invoke() by ChatOptions.organizationId.
+- Two raw clients: `llm.service.ts:31`, `vector-store.service.ts:47` (already passes dimensions:1536).
+- Mirror: git-provider.interface.ts + factory; config-resolver.ts (DB→env→default); encryption.ts decryptValue.
+- OrganizationSettings has `[key: string]: unknown` at types/organization-settings.types.ts:311 → no migration.
+- Per-model flags (reasoningModel / usesMaxCompletionTokens / acceptsSampling) ride on ChatRequest, set by factory.
