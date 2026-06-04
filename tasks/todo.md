@@ -1,97 +1,71 @@
-# Websites as Connected Sources (Option B — built-in importer)
+# Build: Generic Twenty CRM Plugin
 
-## Goal / Acceptance Criteria
+## Goal
 
-- A user can connect a website URL and it appears in `/documents/sources` like Confluence:
-  display name, sync status pill, "last synced", document count.
-- Pages sync as `Document`s tied to a `DocumentSource` (sourceType `website`), with
-  `externalUpdatedAt` populated from sitemap `<lastmod>` / `Last-Modified` so the UI
-  shows when each page was last updated, and incremental sync is cheap.
-- Re-sync (manual + scheduled), incremental delta, and weekly full-sweep deletion
-  reconciliation all work via the existing sync engine — no engine special-casing
-  beyond importer resolution.
-- The old one-shot web import (discoverWebPages/importFromWeb/recrawl) is REMOVED;
-  the import.vue website step creates a website source instead.
+A generic Hay plugin (`hay-plugin-twenty`) connecting **any** Twenty CRM workspace
+(Twenty Cloud or self-hosted) via the user's own base URL + API key. Inspired by the
+workspace-specific backoffice MCP at `hay-website/hay-backoffice/src`, but stripped of all
+custom fields (source/stage/vertical/fit/signals/COMPANY_SIZE) so it works for anyone.
 
-## Decisions (confirmed with user)
+Archetype **A** (local bundled MCP over stdio), gold-standard reference: `klaviyo`.
 
-- No-sitemap sites: sitemap-first; bounded single crawl fallback (maxPages cap),
-  no per-page lastmod there. Log the limitation.
-- Converge now: remove the one-shot web import endpoints in this PR.
-- Built-in importer uses sentinel `pluginId = "core:website"`, `sourceType = "website"`.
+## Acceptance criteria
+
+- [ ] `package.json` has `hay-plugin` block, ESM, no `manifest.json`.
+- [ ] `src/index.ts` default-exports `defineHayPlugin`; config = baseUrl + apiKey (encrypted).
+- [ ] `onValidateAuth` does a real round-trip; `onStart` gates on creds; `onDisable` present.
+- [ ] `mcp/` plain-JS server using native `fetch` (no axios), `@modelcontextprotocol/sdk` + zod.
+- [ ] Tools cover standard objects (people/companies/notes/tasks) + **generic record CRUD** +
+      **metadata** (so custom objects/fields in the user's own workspace are reachable).
+- [ ] No workspace-specific fields hardcoded. No secrets. `strict: true`.
+- [ ] `npm run build` passes; tools list cleanly.
 
 ## Plan
 
-- [ ] Backend: `web-scraper.service.ts` — extract sitemap `<lastmod>` + `Last-Modified` header
-- [ ] Backend: new `WebsiteImporter` implementing DocumentImporterContract over web-scraper + HtmlProcessor
-- [ ] Backend: `document-source-sync.service.ts` — `resolveImporter(source)` pluggable hook
-- [ ] Backend: `document-sources/index.ts` — `createWebsite({ url })` mutation (SSRF-validated)
-- [ ] Frontend: import.vue website step → `createWebsite` → redirect to sources/[id]
-- [ ] Frontend: `getSourceIcon` Globe for `website`; i18n labels
-- [ ] Remove: discoverWebPages/importFromWeb/recrawl endpoints + dead web-import code paths
-- [ ] Verify: typecheck, server tests (add WebsiteImporter unit + resolver test), manual repro
+- [x] Read SDK contract, archetypes, anti-patterns
+- [x] Study backoffice Twenty service + MCP tools (API shapes)
+- [x] Study klaviyo (gold standard) scaffolding
+- [x] Create worktree `plugin/twenty-crm`
+- [ ] Scaffold package.json / tsconfig / src/index.ts / i18n / README
+- [ ] mcp/ : lib/client.js (fetch+retry+error fmt), lib/format.js (ok/fail/blocknote)
+- [ ] mcp/tools: people, companies, notes, tasks, metadata, records (generic)
+- [ ] mcp/index.js boot + register all tools
+- [ ] Build verification
 
-## Working Notes
+## Working notes
 
-- Sync engine importer resolution: document-source-sync.service.ts:159 + createImporter (516).
-- createImporter takes (router, source) and returns DocumentImporterContract — built-in
-  importer is constructed WITH source, ignores instanceId, reads base URL from source.config.url.
-- Contract: server/types/plugin-sdk.types.ts (DocumentImporterContract + page/root/change types).
-- Sources UI already generic; thumbnail <img> 404s for core:website and falls back to getSourceIcon.
-- discover() must be resumable via offset cursor — re-fetch sitemap each page, slice by offset.
+- Twenty REST base: `${baseUrl}/rest`; metadata: `${baseUrl}/rest/metadata`.
+- List response: `{ data: { <plural>: [...] }, pageInfo: { hasNextPage, endCursor } }`.
+- Single: `{ data: { <singular>: {...} } }`. Create: `{ data: { create<Singular>: {...} } }`.
+- Filter: `field[eq]:value`, `and(...)`, `or(...)`, `like:%x%`. Pagination: `starting_after` cursor.
+- Notes/tasks bodies use `bodyV2: { blocknote, markdown }`. Attach via `/noteTargets` `/taskTargets`.
+- Generic tools key off `objectNamePlural` in the path; unwrap first key of `data`.
+- build-plugins.sh installs `mcp/` deps at build time → node_modules stays gitignored.
 
 ## Results
 
-**What changed**
+**Built** `plugins/core/twenty/` — generic Twenty CRM plugin (archetype A, klaviyo pattern).
 
-- Websites are now first-class `DocumentSource`s (sourceType `website`, sentinel pluginId
-  `core:website`) backed by a built-in importer — no plugin required. They show in
-  /documents/sources with sync status, "last synced", doc count, and per-page `externalUpdatedAt`
-  from sitemap `<lastmod>` / `Last-Modified` (the "when was it updated" data the user wanted).
-  Re-sync, incremental delta, and weekly full-sweep deletion reconciliation all work via the
-  existing sync engine, unchanged.
-- New: server/services/importers/website-importer.ts; createWebsite mutation; resolveImporter() seam.
-- Converged: the old one-shot web import is gone; the import.vue "website" step connects a source.
+Files:
 
-**Verification**
+- `package.json` (hay-plugin block, ESM, mcp+auth), `tsconfig.json` (strict), `README.md`, `i18n/en.json`, `thumbnail.jpg` (placeholder — replace with Twenty logo).
+- `src/index.ts` — `defineHayPlugin`; config `baseUrl` + `apiKey` (encrypted); `onValidateAuth` round-trips `/rest/metadata/objects`; `onStart` gates on creds + spawns stdio MCP; `onConfigUpdate`/`onDisable` present (no `onEnable`).
+- `mcp/index.js` boot + `mcp/lib/{client,format}.js` (native fetch, retry on 429/5xx, error-body surfacing, blocknote/link/filter helpers).
+- `mcp/tools/{people,companies,notes,tasks,metadata,records}.js` — **26 tools**, all `twenty_`-prefixed.
 
-- server typecheck ✅ · server lint (changed files) ✅
-- dashboard typecheck ✅ (API_DOMAIN=… NODE_ENV=development) · dashboard lint (changed files) ✅
-- jest website-importer.test.ts ✅ 5/5 · jest document-source-sync.test.ts ✅ (plugin path intact)
+Generic design: `twenty_list_objects` + `twenty_get_select_options` (schema discovery) and
+`twenty_{list,get,create,update,delete}_record` reach ANY object incl. custom ones. Typed
+people/company/note/task tools are the friendly fast-path. No workspace-specific fields hardcoded.
 
-**Live sync progress (added)**
+Verification:
 
-- Sync engine streams throttled progress onto the running job's `data.progress`
-  ({ phase, total, discovered, processed, created, updated, currentTitle, currentUrl }).
-- WebsiteImporter.discover reports `total` (enumerated count) → "X of Y" bar.
-- Source detail page shows a live "Discovering / Importing pages…" card (counts + current page),
-  polls every 2s while a sync job is active (queued/processing/running), and reflects on connect.
-- Verified: server typecheck/lint ✅, dashboard typecheck/lint ✅, importer + sync tests ✅.
+- `npm run build` (tsc) → exit 0, emits `dist/index.js`.
+- MCP smoke test: all 26 tools register; `normalizeBaseUrl` strips `/rest`.
+- Full stdio handshake (initialize + tools/list via SDK Client) → 26 tools with real input schemas.
+- Git hygiene: dist + node_modules + mcp/node_modules ignored; only source staged; no secrets.
+- `ilike` (case-insensitive) confirmed supported by Twenty REST API (docs).
 
-**Bugfix: duplicate sync jobs / frozen progress (regression)**
+Assumptions / follow-ups:
 
-- Symptom: connecting one website produced a new "Sync …" job every 60s, all stuck
-  "processing", 0 documents, and the live card frozen at "Importing pages… Starting…".
-- Root cause: the 60s `document-source-sync-dispatcher` enqueues every source
-  `findDueForSync` returns. A brand-new source has `last_synced_at = NULL` and
-  `last_sync_status = NULL` (the 'running' flag is only set once a worker picks the
-  job up via `markRunning`), so it matched "due" every tick → one new job per minute.
-  The UI polls the newest active job, but each duplicate bailed at `markRunning`
-  ("already running") and never reported progress → frozen "Starting…", while the
-  oldest job silently did the work.
-- Fix: `enqueueSync` is now idempotent — `jobRepository.findActiveSyncJob(sourceId)`
-  returns any pending/queued/processing sync job for the source and `enqueueSync`
-  reuses it instead of creating a duplicate. Single chokepoint, covers both the
-  dispatcher and the manual "Sync now" / connect paths. Collapsing to one job also
-  restores live progress (the polled job is now the one doing the work).
-- Regression test: `enqueueSync is idempotent` in the sync integration suite.
-- Verified: server typecheck ✅ · lint ✅ · jest document-source-sync ✅ 7 passed / 2 skipped.
-- Note: existing piled-up jobs drain on their own (each reaches terminal via
-  completeJob); the fix takes effect after the server restarts to load new code.
-
-**Known follow-ups (optional)**
-
-- Unused i18n keys remain (documents.import.discovery._, .metadata._, processing web keys,
-  webUrl.discoverPages, steps.selectPages/addMetadata/processing) — harmless; prune later.
-- No-sitemap crawl-fallback ordering is best-effort across partial-run resumes (sitemap path is
-  deterministic). Acceptable for v1; weekly full sweep reconciles.
+- thumbnail.jpg is a placeholder copied from klaviyo — swap for Twenty's logo.
+- Not yet exercised against a live Twenty workspace (no test creds); request shapes mirror the proven backoffice integration.
