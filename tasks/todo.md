@@ -8,7 +8,7 @@ Branch: `claude/llm-provider-adapter`.
 ## Slices (build/verify order, one PR)
 
 - [x] **1. Contract + OpenAICompatibleProvider + factory → LLMService (env-default, provably unchanged)** ✅ typecheck/lint/char-test green
-- [ ] 2. Tiers replace hardcoded models at the ~12 call sites
+- [x] 2. Tiers replace hardcoded models at call sites ✅ (org threading + orchestrator tier labels → folded into slice 5)
 - [ ] 3. UsageRecord + invokeWithMeta + onUsage; delete bogus cost log
 - [ ] 4. Capability-driven structured-output rungs + validate-and-repair (ajv)
 - [ ] 5. OrgLlmConfig in OrganizationSettings jsonb + BYO decryption + bundle cache
