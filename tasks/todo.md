@@ -9,7 +9,7 @@ Branch: `claude/llm-provider-adapter`.
 
 - [x] **1. Contract + OpenAICompatibleProvider + factory → LLMService (env-default, provably unchanged)** ✅ typecheck/lint/char-test green
 - [x] 2. Tiers replace hardcoded models at call sites ✅ (org threading + orchestrator tier labels → folded into slice 5)
-- [ ] 3. UsageRecord + invokeWithMeta + onUsage; delete bogus cost log
+- [x] 3. UsageRecord + invokeWithMeta + onUsage seam ✅ (bogus cost log removed in slice 1)
 - [ ] 4. Capability-driven structured-output rungs + validate-and-repair (ajv)
 - [ ] 5. OrgLlmConfig in OrganizationSettings jsonb + BYO decryption + bundle cache
 - [ ] 6. VectorStoreService → EmbeddingProvider + 1536 assertion
