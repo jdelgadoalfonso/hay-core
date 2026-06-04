@@ -15,7 +15,7 @@ Branch: `claude/llm-provider-adapter`.
 - [x] 6. VectorStoreService → EmbeddingProvider + 1536 assertion ✅ (both raw OpenAI clients now gone)
 - [x] 7. AnthropicChatProvider (dedicated, @anthropic-ai/sdk) ✅ (streaming stub → slice 9)
 - [x] 8. GeminiChatProvider (@google/genai) + Mistral/Grok vendor capability profiles ✅ (gemini chat-only; embeddings managed)
-- [ ] 9. Streaming (chatStream) + AbortSignal timeout
+- [x] 9. Streaming (chatStream for all 3 adapters) + AbortSignal-cancel timeout ✅
 - [ ] 10. Dashboard org-settings LLM UI
 
 ## Acceptance
