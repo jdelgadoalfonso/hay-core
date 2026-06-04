@@ -16,7 +16,7 @@ Branch: `claude/llm-provider-adapter`.
 - [x] 7. AnthropicChatProvider (dedicated, @anthropic-ai/sdk) ✅ (streaming stub → slice 9)
 - [x] 8. GeminiChatProvider (@google/genai) + Mistral/Grok vendor capability profiles ✅ (gemini chat-only; embeddings managed)
 - [x] 9. Streaming (chatStream for all 3 adapters) + AbortSignal-cancel timeout ✅
-- [ ] 10. Dashboard org-settings LLM UI
+- [x] 10. Dashboard org-settings LLM UI ✅ (getLlmConfig/updateLlmConfig + settings/llm page)
 
 ## Acceptance
 
