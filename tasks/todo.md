@@ -12,7 +12,7 @@ Branch: `claude/llm-provider-adapter`.
 - [x] 3. UsageRecord + invokeWithMeta + onUsage seam ✅ (bogus cost log removed in slice 1)
 - [x] 4. Capability-driven structured-output rungs + validate-and-repair (ajv) ✅
 - [x] 5. OrgLlmConfig in OrganizationSettings jsonb + BYO decryption + bundle cache ✅
-- [ ] 6. VectorStoreService → EmbeddingProvider + 1536 assertion
+- [x] 6. VectorStoreService → EmbeddingProvider + 1536 assertion ✅ (both raw OpenAI clients now gone)
 - [ ] 7. AnthropicChatProvider (dedicated, @anthropic-ai/sdk)
 - [ ] 8. GeminiProvider (chat + embedding, @google/genai); Mistral+Grok = config of OpenAICompatible
 - [ ] 9. Streaming (chatStream) + AbortSignal timeout
