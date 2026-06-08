@@ -38,3 +38,8 @@
 ### enabled_tools not enforced server-side
 - **Failure mode**: LLM can call any tool regardless of the conversation's `enabled_tools` list — prompt injection could trigger unauthorized tool execution
 - **Prevention**: Check `conversation.enabled_tools` before every tool execution in the orchestrator loop
+
+### Plugin tRPC routers registered only at server boot
+- **Failure mode**: A plugin built/installed/enabled while the server was running had no router in `pluginRouterRegistry` until an unrelated restart. `documentSources.listRoots` and the sync engine failed with "does not expose a router". nodemon only watches `server/**/*.ts`, so plugin `dist/*.cjs` builds never triggered a restart.
+- **Detection signal**: tRPC BAD_REQUEST "Plugin 'X' does not expose a router with listRoots" despite the manifest having `autoActivate`+`trpcRouter` and `dist/router.cjs` existing on disk.
+- **Prevention**: Registration must be self-healing, not boot-only. Added idempotent `pluginManagerService.ensurePluginRouterRegistered(pluginId)`; on-demand router consumers (listRoots, sync `resolveImporter`) call it before `getRouter`.
