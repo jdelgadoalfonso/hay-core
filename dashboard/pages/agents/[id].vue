@@ -340,8 +340,12 @@ type AgentLanguage = RouterInputs["agents"]["create"]["language"];
 type OrganizationSettings = RouterOutputs["organizations"]["getSettings"];
 
 // Stored instruction data (jsonb) is opaque; coerce a non-null object into editor JSON content.
-const toInstructionContent = (value: unknown): JSONContent =>
-  value && typeof value === "object" ? (value as JSONContent) : { blocks: [] };
+const toInstructionContent = (value: unknown): JSONContent => {
+  if (Array.isArray(value)) {
+    return { type: "doc", content: value };
+  }
+  return value && typeof value === "object" ? (value as JSONContent) : { type: "doc", content: [] };
+};
 
 // The create-agent input shape for the non-nullable handoff instruction fields (jsonb columns).
 // Excludes null so the result also satisfies the nullable `instructions` slot.
@@ -352,8 +356,12 @@ type InstructionsInput = NonNullable<
 // Editor JSON content is persisted verbatim into the jsonb instructions column;
 // the mutation input types the opaque jsonb slot, so reuse it for the boundary.
 // Always returns a non-null object so it assigns to both nullable and non-nullable slots.
-const toInstructionsInput = (value: JSONContent | null | undefined): InstructionsInput =>
-  (value ?? { blocks: [] }) as unknown as InstructionsInput;
+const toInstructionsInput = (value: JSONContent | null | undefined): InstructionsInput => {
+  if (value && typeof value === "object") {
+    return (value.content ?? value.blocks ?? []) as unknown as InstructionsInput;
+  }
+  return [] as unknown as InstructionsInput;
+};
 
 const router = useRouter();
 const route = useRoute();
